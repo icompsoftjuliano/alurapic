@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { FotoComponent } from '../foto/foto.component';
-import { Http, Headers } from '@angular/http';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { FotoService } from '../foto/foto.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
     moduleId: module.id,
@@ -11,11 +12,32 @@ import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 export class CadastroComponent {
 
     foto: FotoComponent = new FotoComponent();
-    http: Http;
     meuForm: FormGroup;
+    service: FotoService;
+    route: ActivatedRoute;
+    router: Router;
+    mensagem: string = '';
 
-    constructor(http: Http, fb: FormBuilder) {
-        this.http = http;
+    constructor(service: FotoService, fb: FormBuilder, route: ActivatedRoute, router: Router) {
+
+        this.service = service;
+
+        this.route = route;
+        this.router = router;
+
+        this.route.params.subscribe(params => {
+            let id = params['id'];
+
+            if (id) {
+                this.service
+                    .buscaPorId(id)
+                    .subscribe(
+                    foto => this.foto = foto,
+                    erro => console.log(erro)
+                    );
+            }
+        });
+
         this.meuForm = fb.group({
             titulo: ['', Validators.compose([Validators.required, Validators.minLength(4)])],
             url: ['', Validators.required],
@@ -26,11 +48,12 @@ export class CadastroComponent {
     cadastrar(event) {
         event.preventDefault();
 
-        let headers = new Headers();
-        headers.append('Content-Type', 'application/json');
-        this.http.post('v1/fotos', JSON.stringify(this.foto), { headers: headers })
-            .subscribe(() => {
+        this.service
+            .cadastra(this.foto)
+            .subscribe(res => {
+                this.mensagem = res.mensagem;
                 this.foto = new FotoComponent();
+                if(!res.inclusao) this.router.navigate(['']);
             }, erro => console.log(erro));
     }
 }
